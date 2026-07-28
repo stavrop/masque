@@ -9,13 +9,14 @@ actor ICloudLiveService: ICloudService {
 
     // MARK: Constants
     private let widgetKey = "d39ba9916b7251055b22c7f910e2ea796ee65e98b2ddecea8f5dde8d9d1a815d"
-    private let clientId = "auth-" + UUID().uuidString.lowercased()
+    private var clientId = "auth-" + UUID().uuidString.lowercased()
     private let authRoot = "https://idmsa.apple.com"
     private let auth = "https://idmsa.apple.com/appleauth/auth"
     private let home = "https://www.icloud.com"
     private let setup = "https://setup.icloud.com/setup/ws/1"
     private let userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
     private let trustTokenKey = "trustToken"
+    private let sessionKey = "sessionBundle"
 
     // MARK: Session state (captured from response headers)
     private var sessionId: String?
@@ -24,6 +25,7 @@ actor ICloudLiveService: ICloudService {
     private var trustToken: String?        // X-Apple-TwoSV-Trust-Token (persisted)
     private var accountCountry: String?
     private(set) var hmeBase: URL?         // premiummailsettings host
+    private(set) var dsid: String?         // dsInfo.dsid, binds service requests to the session
 
     // MARK: In-flight login
     private var srp: SRPClient?
@@ -49,11 +51,55 @@ actor ICloudLiveService: ICloudService {
 
     // MARK: - ICloudService: session lifecycle
 
+    private struct SessionBundle: Codable {
+        var cookies: [[String: String]]
+        var dsid: String?
+        var clientId: String
+        var hmeBase: URL?
+    }
+
     func restoreSession() async throws -> Bool {
-        // Cookies are in-memory only, so a cold launch has no live session. If a
-        // trust token is stored we still require an explicit sign-in (which will
-        // skip 2FA thanks to the token) — so report "not restored" here.
-        return false
+        guard let bundle = keychain.getCodable(SessionBundle.self, for: sessionKey) else {
+            dbg("restore: no stored session")
+            return false
+        }
+        // Rehydrate cookies + service context, then prove the session is live.
+        for props in bundle.cookies {
+            var p: [HTTPCookiePropertyKey: Any] = [:]
+            props.forEach { p[HTTPCookiePropertyKey($0.key)] = $0.value }
+            if let c = HTTPCookie(properties: p) {
+                session.configuration.httpCookieStorage?.setCookie(c)
+            }
+        }
+        clientId = bundle.clientId
+        dsid = bundle.dsid
+        hmeBase = bundle.hmeBase
+        dbg("restore: rehydrated session, verifying…")
+        do {
+            _ = try await listAddresses()
+            dbg("restore: session is live")
+            return true
+        } catch {
+            dbg("restore: stored session invalid (\(error.localizedDescription))")
+            keychain.remove(sessionKey)
+            hmeBase = nil; dsid = nil
+            session.configuration.httpCookieStorage?.removeCookies(since: .distantPast)
+            return false
+        }
+    }
+
+    /// Persist the live session so a relaunch can restore it without re-login.
+    private func persistSession() {
+        let cookies = (session.configuration.httpCookieStorage?.cookies ?? [])
+            .filter { $0.domain.contains("icloud.com") }
+            .map { c -> [String: String] in
+                var d = ["name": c.name, "value": c.value, "domain": c.domain, "path": c.path]
+                if c.isSecure { d["secure"] = "TRUE" }
+                return d
+            }
+        let bundle = SessionBundle(cookies: cookies, dsid: dsid, clientId: clientId, hmeBase: hmeBase)
+        keychain.setCodable(bundle, for: sessionKey)
+        dbg("session persisted (\(cookies.count) cookies)")
     }
 
     func signIn(appleID: String, password: String) async throws -> SignInOutcome {
@@ -153,9 +199,11 @@ actor ICloudLiveService: ICloudService {
                             json: ["trustBrowsers": false, "allBrowsers": false],
                             headers: defaultHeaders())
         keychain.remove(trustTokenKey)
+        keychain.remove(sessionKey)
         resetTransient()
         trustToken = nil
         hmeBase = nil
+        dsid = nil
         session.configuration.httpCookieStorage?.removeCookies(since: .distantPast)
     }
 
@@ -198,8 +246,51 @@ actor ICloudLiveService: ICloudService {
             dbg("accountLogin: premiummailsettings host not found in webservices")
             throw ICloudError.server("Could not start iCloud session.")
         }
-        dbg("accountLogin: HME host = \(url.host ?? "?")")
+        // dsid binds subsequent service calls to this session (avoids "Invalid global session").
+        if let dsInfo = json["dsInfo"] as? [String: Any], let d = dsInfo["dsid"] {
+            dsid = (d as? String) ?? String(describing: d)
+        }
+        dbg("accountLogin: HME host = \(url.host ?? "?"), dsid=\(dsid ?? "nil")")
         hmeBase = url
+        // The browser extension always hits /validate right after accountLogin —
+        // this appears to activate the session for service (maildomains) calls.
+        try? await validateSession()
+        persistSession()
+    }
+
+    /// POST setup/validate — refreshes/activates the web session and webservices.
+    private func validateSession() async throws {
+        dbg("validate → POST")
+        let (data, resp) = try await send("\(setup)/validate", method: "POST",
+                                          json: nil, headers: defaultHeaders())
+        dbg("validate ← \(resp.statusCode)")
+        if resp.statusCode == 200,
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let ws = json["webservices"] as? [String: Any],
+           let hme = ws["premiummailsettings"] as? [String: Any],
+           let urlStr = hme["url"] as? String, let url = URL(string: urlStr) {
+            hmeBase = url
+        }
+    }
+
+    /// Query params iCloud web services require to validate the session.
+    func serviceQueryItems() -> [URLQueryItem] {
+        var items = [
+            URLQueryItem(name: "clientBuildNumber", value: "2522Project44"),
+            URLQueryItem(name: "clientMasteringNumber", value: "2522B2"),
+            URLQueryItem(name: "clientId", value: clientId),
+        ]
+        if let dsid { items.append(URLQueryItem(name: "dsid", value: dsid)) }
+        return items
+    }
+
+    /// Debug-only: log cookie names + domains (never values) the jar would send to `url`.
+    func logCookies(for url: URL, label: String) {
+        guard debug, let storage = session.configuration.httpCookieStorage else { return }
+        let scoped = storage.cookies(for: url) ?? []
+        let all = storage.cookies ?? []
+        let names = scoped.map { "\($0.name)@\($0.domain)" }
+        dbg("cookies \(label): \(scoped.count) sent to host / \(all.count) total → \(names.joined(separator: ", "))")
     }
 
     // MARK: - HTTP

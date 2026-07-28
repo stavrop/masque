@@ -24,6 +24,7 @@ final class AppState: ObservableObject {
     @Published var toast: String?
 
     private let service: ICloudService
+    private var didBootstrap = false
 
     init(service: ICloudService) {
         self.service = service
@@ -35,7 +36,12 @@ final class AppState: ObservableObject {
 
     // MARK: Lifecycle
 
+    /// Runs once per launch. The menu bar popover re-fires its `.task` on every
+    /// reopen, so guard against re-running — otherwise a live in-memory session
+    /// would be reset back to the login screen each time the popover opens.
     func bootstrap() async {
+        guard !didBootstrap else { return }
+        didBootstrap = true
         screen = .restoring
         do {
             if try await service.restoreSession() {
@@ -119,6 +125,11 @@ final class AppState: ObservableObject {
 
     func delete(_ address: HMEAddress) async {
         await run {
+            // Apple rejects deleting an active address ("invalid request for
+            // private email") — it must be deactivated first.
+            if address.isActive {
+                try await self.service.setActive(false, anonymousId: address.anonymousId)
+            }
             try await self.service.deleteAddress(anonymousId: address.anonymousId)
             self.addresses.removeAll { $0.id == address.id }
             self.flash("Deleted")

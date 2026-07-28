@@ -1,0 +1,57 @@
+# GitLab CI/CD — Masque (native macOS menu bar app, SwiftUI).
+#
+# Pipeline
+#   test  – XcodeGen-generate the project, then build + run the unit tests
+#           (the SRP vectors) on macOS. Every push / MR / tag.
+#
+# The .xcodeproj is generated from macos/project.yml by XcodeGen in the job —
+# nothing generated is committed. Runs on the shared macOS/Xcode runners
+# (tags `macOS`, `xcode`). No code signing: unit tests run ad-hoc-signed, which
+# macOS allows for local execution.
+#
+# Versioning: MAJOR.MINOR (no patch) + build number, e.g. "0.1 (1)". Tags are
+# vMAJOR.MINOR (v0.1).
+
+stages:
+  - test
+
+variables:
+  DEVELOPER_DIR: "/Applications/Xcode.app/Contents/Developer"
+  LC_ALL: "en_US.UTF-8"
+  LANG: "en_US.UTF-8"
+  SCHEME: "Masque"
+  PROJECT: "Masque.xcodeproj"
+  APP_DIR: "macos"
+
+default:
+  tags:
+    - macOS
+    - xcode
+  interruptible: true
+  before_script:
+    - export PATH="/opt/homebrew/bin:$PATH"
+    - command -v xcodegen >/dev/null 2>&1 || brew install xcodegen
+    - cd "$APP_DIR"
+    - xcodegen generate
+    - set -o pipefail
+
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_TAG'
+
+# ── build + unit tests (unsigned / ad-hoc) ───────────────────────────────────
+test:macos:
+  stage: test
+  script:
+    - >
+      xcodebuild
+      -project "$PROJECT"
+      -scheme "$SCHEME"
+      -configuration Debug
+      -destination 'platform=macOS'
+      CODE_SIGN_IDENTITY="-"
+      CODE_SIGNING_REQUIRED=NO
+      CODE_SIGNING_ALLOWED=YES
+      clean test

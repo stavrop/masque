@@ -53,6 +53,7 @@ enum ICloudError: LocalizedError {
     case invalidCredentials
     case invalidSecurityCode
     case sessionExpired
+    case webAccessDisabled
     case rateLimited
     case server(String)
     case network(String)
@@ -63,6 +64,11 @@ enum ICloudError: LocalizedError {
         case .invalidCredentials: return "Incorrect Apple ID or password."
         case .invalidSecurityCode: return "That code wasn’t accepted. Try again."
         case .sessionExpired:    return "Your session expired. Please sign in again."
+        case .webAccessDisabled:
+            return "“Access iCloud Data on the Web” is turned off for this Apple ID. "
+                + "On an iPhone/iPad (Settings › your name › iCloud › Access iCloud Data on the Web) "
+                + "or Mac (System Settings › your name › iCloud › Access iCloud Data on the Web), "
+                + "turn it on, then sign in again."
         case .rateLimited:       return "Apple is rate-limiting requests. Wait a bit and retry."
         case .server(let m):     return m
         case .network(let m):    return m

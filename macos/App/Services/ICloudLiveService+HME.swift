@@ -50,7 +50,11 @@ extension ICloudLiveService {
     private func hmeCall(version: Int, _ path: String, method: String,
                          body: [String: Any]?) async throws -> Data {
         guard let base = hmeBase else { throw ICloudError.notAuthenticated }
-        let url = base.appendingPathComponent("v\(version)").appendingPathComponent(path)
+        let pathURL = base.appendingPathComponent("v\(version)").appendingPathComponent(path)
+        var components = URLComponents(url: pathURL, resolvingAgainstBaseURL: false)!
+        components.queryItems = serviceQueryItems()
+        let url = components.url!
+        dbg("hme URL: \(url.absoluteString)")
         let (data, resp) = try await send(url.absoluteString, method: method,
                                           json: body, headers: defaultHeaders())
         dbg("\(method) v\(version)/\(path) ← \(resp.statusCode)")
@@ -58,6 +62,14 @@ extension ICloudLiveService {
         case 200, 204:
             break
         case 401, 421, 450:
+            let bodyText = String(data: data, encoding: .utf8) ?? ""
+            dbg("hme error body: \(bodyText.prefix(300))")
+            // "Invalid global session" here means the web session reached the
+            // service but isn't authorized — on this account that's caused by
+            // "Access iCloud Data on the Web" being turned off.
+            if bodyText.localizedCaseInsensitiveContains("global session") {
+                throw ICloudError.webAccessDisabled
+            }
             throw ICloudError.sessionExpired
         default:
             throw ICloudError.server("Request failed (HTTP \(resp.statusCode)).")

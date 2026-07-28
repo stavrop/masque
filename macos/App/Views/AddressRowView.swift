@@ -32,7 +32,21 @@ struct AddressRowView: View {
             }
             Spacer(minLength: 4)
 
-            if hovering {
+            // Inline confirmation — a system confirmationDialog would open its own
+            // window and dismiss the menu bar popover, orphaning the dialog.
+            if confirmingDelete {
+                HStack(spacing: 4) {
+                    Text("Delete?").font(.caption).foregroundStyle(.secondary)
+                    Button("Delete", role: .destructive) {
+                        confirmingDelete = false
+                        onDelete()
+                    }
+                    .controlSize(.small)
+                    Button("Cancel") { confirmingDelete = false }
+                        .controlSize(.small)
+                }
+                .transition(.opacity)
+            } else if hovering {
                 HStack(spacing: 2) {
                     iconButton("doc.on.doc", "Copy address", onCopy)
                     iconButton("square.and.pencil", "Edit", onEdit)
@@ -45,15 +59,9 @@ struct AddressRowView: View {
         }
         .padding(.horizontal, 12).padding(.vertical, 7)
         .contentShape(Rectangle())
-        .background(hovering ? Color.primary.opacity(0.05) : .clear)
+        .background(hovering || confirmingDelete ? Color.primary.opacity(0.05) : .clear)
         .onHover { hovering = $0 }
-        .confirmationDialog("Delete \(address.hme)?",
-                            isPresented: $confirmingDelete, titleVisibility: .visible) {
-            Button("Delete", role: .destructive, action: onDelete)
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This permanently removes the address. Mail sent to it will no longer be delivered.")
-        }
+        .animation(.default, value: confirmingDelete)
     }
 
     private func iconButton(_ symbol: String, _ help: String, _ action: @escaping () -> Void) -> some View {

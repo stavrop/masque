@@ -1,36 +1,53 @@
 # Masque
 
 A small macOS **menu bar app** for Apple **Hide My Email**: create new addresses,
-search/manage existing ones, all from the menu bar.
+search your existing ones, and manage them (edit label/note, deactivate,
+reactivate, delete) — all from the menu bar.
 
-<img alt="menu bar" src="docs/screenshot.png" width="380">
+## Features
 
-## Status
+- 🔐 **Native iCloud sign-in** — Apple ID + password + two-factor, implemented
+  in Swift (SRP-6a). The password never leaves your Mac in the clear; only
+  Apple's trust token is stored (Keychain), so subsequent logins skip 2FA.
+- 💾 **Persistent session** — the authenticated session is saved to the Keychain
+  and silently restored on the next launch (re-validated with a live call); no
+  re-login until Apple actually expires it.
+- ➕ **Create** — generate a candidate address, label it + add a note, reserve it.
+- 🔎 **Search** — filter by label, note, address, or forward-to address.
+- 🛠 **Manage** — edit label/note, deactivate / reactivate, delete (auto-deactivates
+  first, since Apple won't delete an active address).
+- 📐 **Resizable list** — the address list height defaults to ~40% of your screen
+  and is drag-resizable (remembered across launches).
 
-- ✅ Full SwiftUI `MenuBarExtra` UI: sign in → 2FA → list/search → create → edit / activate / deactivate / delete.
-- ✅ Native iCloud auth (SRP-6a + 2FA + trust token) reimplemented in Swift, **verified byte-for-byte against the reference `pysrp` implementation** (`MasqueTests`).
-- ✅ Live Hide My Email client (generate / reserve / list / deactivate / reactivate / delete / updateMetaData).
-- ✅ Runs against in-memory mock data for UI work (`-mock`).
+## ⚠️ Requirement: "Access iCloud Data on the Web" must be ON
 
-## ⚠️ Important: this uses *unofficial* iCloud endpoints
+Masque reaches Hide My Email through Apple's iCloud **web** service endpoints (the
+same ones icloud.com uses). Those services reject any web session unless your
+Apple ID has **Access iCloud Data on the Web** enabled — otherwise every request
+fails with `Invalid global session` and Masque will tell you so.
+
+Turn it on (once), on a trusted device:
+
+- **iPhone/iPad:** Settings → *your name* → iCloud → **Access iCloud Data on the Web**
+- **Mac:** System Settings → *your name* → iCloud → **Access iCloud Data on the Web**
+
+It can't be enabled from a browser — Apple only exposes a "Manage on Device…" link
+there. This is a deliberate privacy control; with it off, no web-based tool
+(Masque, the browser extension, or icloud.com data views) can reach your data.
+
+## ⚠️ Unofficial endpoints
 
 Apple publishes **no** public API for Hide My Email. Masque talks to the same
-private web endpoints (`idmsa.apple.com/appleauth`, `setup.icloud.com`,
-`*-maildomains.icloud.com`) that the icloud.com web client and the well-known
-"Hide My Email" browser extension use. That means:
+private endpoints (`idmsa.apple.com/appleauth`, `setup.icloud.com`,
+`*-maildomainws.icloud.com`) that the icloud.com web client and the well-known
+"Hide My Email" browser extension use. They can change or break without notice.
+Use it on your own account, at your own discretion.
 
-- These endpoints can change or break without notice.
-- Your Apple ID + password are sent **only to Apple** (over TLS, via the SRP
-  handshake — the password itself never leaves the device in cleartext) and are
-  **never stored**. Only Apple's *trust token* is saved (in the Keychain) so you
-  can skip 2FA on the next sign-in.
-- Use it on your own account, at your own discretion.
-
-## Build
+## Build & run
 
 Requires Xcode 26+, [XcodeGen](https://github.com/yonaskolb/XcodeGen)
-(`brew install xcodegen`), and the [BigInt](https://github.com/attaswift/BigInt)
-Swift package (resolved automatically).
+(`brew install xcodegen`); the [BigInt](https://github.com/attaswift/BigInt)
+package is resolved automatically.
 
 ```sh
 cd macos
@@ -43,14 +60,16 @@ Or from the CLI:
 ```sh
 cd macos
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
-  xcodebuild -scheme Masque -destination 'platform=macOS' build
+  xcodebuild -scheme Masque -destination 'platform=macOS' build   # or: test
 ```
 
 ### Mock vs. live
 
 - **Live (default):** talks to real iCloud. Sign in with your Apple ID + 2FA.
-- **Mock:** launch with `-mock` (or `MASQUE_MOCK=1`) for fake in-memory data,
-  no network. Handy for UI work. In mock mode the 2FA code is `123456`.
+- **Mock:** launch with `-mock` (or `MASQUE_MOCK=1`) for in-memory fake data, no
+  network — handy for UI work. In mock mode the 2FA code is `123456`.
+- **Debug logging:** set `MASQUE_DEBUG=1` to log each auth/API step (status codes
+  only — never passwords, codes, tokens, or cookie values) to stderr.
 
 ## Architecture
 
@@ -63,9 +82,9 @@ macos/App/
   Services/
     ICloudService.swift        protocol the UI depends on (+ ICloudError)
     MockICloudService.swift    in-memory fake
-    ICloudLiveService.swift    actor: SRP + 2FA + accountLogin
+    ICloudLiveService.swift    actor: SRP + 2FA + accountLogin + session persistence
     ICloudLiveService+HME.swift  Hide My Email endpoints (list=v2, rest=v1)
-    KeychainStore.swift        persists the trust token
+    KeychainStore.swift        trust token + persisted session bundle
     Crypto/
       CryptoUtils.swift        SHA-256, PBKDF2 (s2k/s2k_fo), long_to_bytes/pad
       SRPClient.swift          SRP-6a (pysrp-exact: NG_2048, SHA-256, no_username_in_x)
@@ -73,15 +92,15 @@ macos/Tests/
   SRPClientTests.swift         pins A / M1 / M2 / s2k / s2k_fo to pysrp vectors
 ```
 
-The UI is written against the `ICloudService` protocol, so the whole flow can be
-exercised on the mock before hitting Apple. The live service is an `actor`, so
-session state (cookies, session/trust tokens, the `premiummailsettings` host) is
-race-free.
+The UI is written against the `ICloudService` protocol, so the whole flow runs on
+the mock before ever hitting Apple. The live service is an `actor`, so session
+state (cookies, tokens, the maildomains host) is race-free. The SRP handshake is
+verified byte-for-byte against the reference Python `srp` library in the tests.
 
 ## Known limitations / ideas
 
-- Cookies live in-memory, so a cold launch needs a fresh sign-in (password only —
-  the stored trust token skips 2FA). Persisting the cookie jar to the Keychain
-  and calling `setup.icloud.com/validate` would enable true silent restore.
 - Trusted-device 2FA only (no SMS-code path yet).
-- No global hotkey / Spotlight-style quick create (nice future addition).
+- No global hotkey / quick-create shortcut yet.
+- Custom email domains are not surfaced (only `@icloud.com` addresses).
+
+See [CHANGELOG.md](CHANGELOG.md) for release notes.
