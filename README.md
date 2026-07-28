@@ -4,6 +4,16 @@ A small macOS **menu bar app** for Apple **Hide My Email**: create new addresses
 search your existing ones, and manage them (edit label/note, deactivate,
 reactivate, delete) — all from the menu bar.
 
+## Install
+
+```sh
+brew tap stavrop/tap
+brew install --cask masque
+```
+
+Or grab the notarized `Masque.zip` from the
+[latest release](https://github.com/stavrop/masque/releases/latest).
+
 ## Features
 
 - 🔐 **Native iCloud sign-in** — Apple ID + password + two-factor, implemented
