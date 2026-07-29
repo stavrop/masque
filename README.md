@@ -29,6 +29,18 @@ Or grab the notarized `Masque.zip` from the
 - 📐 **Resizable list** — the address list height defaults to ~40% of your screen
   and is drag-resizable (remembered across launches).
 
+## Support
+
+Masque is free and open-source, built in spare time. If it earns a spot in your
+menu bar, two small things help more than you'd think:
+
+- ⭐️ **[Star it on GitHub](https://github.com/stavrop/masque)** — stars are how
+  other people find it, and they genuinely make my day.
+- ☕️ **[Buy me a coffee](https://www.buymeacoffee.com/stavrop)** — a small tip
+  keeps the late-night bug-fixing caffeinated and the updates coming.
+
+No pressure at all — even telling a friend means a lot. Thank you! 🙏
+
 ## ⚠️ Requirement: "Access iCloud Data on the Web" must be ON
 
 Masque reaches Hide My Email through Apple's iCloud **web** service endpoints (the

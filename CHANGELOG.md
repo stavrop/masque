@@ -6,7 +6,7 @@ MAJOR.MINOR (no patch) + a build number, matching the app's scheme.
 
 ## [Unreleased]
 
-## [0.2] — unreleased
+## [0.2] — 2026-07-29
 
 ### Added
 - Welcome / About window shown at launch (with a "Show at startup" toggle) and
