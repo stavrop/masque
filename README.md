@@ -4,6 +4,10 @@ A small macOS **menu bar app** for Apple **Hide My Email**: create new addresses
 search your existing ones, and manage them (edit label/note, deactivate,
 reactivate, delete) — all from the menu bar.
 
+<p align="center">
+  <img src="docs/screenshot.png" alt="Masque menu bar popover showing a searchable list of Hide My Email addresses" width="380">
+</p>
+
 ## Install
 
 ```sh

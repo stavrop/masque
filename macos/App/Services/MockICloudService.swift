@@ -28,7 +28,14 @@ final class MockICloudService: ICloudService {
         ]
     }
 
-    func restoreSession() async throws -> Bool { false }
+    func restoreSession() async throws -> Bool {
+        // Start already signed-in when asked (handy for UI work / screenshots).
+        if ProcessInfo.processInfo.environment["MASQUE_MOCK_AUTHED"] == "1" {
+            authenticated = true
+            return true
+        }
+        return false
+    }
 
     func signIn(appleID: String, password: String) async throws -> SignInOutcome {
         try await Task.sleep(nanoseconds: 500_000_000)
