@@ -48,6 +48,10 @@ struct LoginView: View {
 
             Divider()
             HStack {
+                Button("About") { WelcomeWindowController.shared.show() }
+                    .buttonStyle(.plain)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 Spacer()
                 Button("Quit Masque") { NSApplication.shared.terminate(nil) }
                     .buttonStyle(.plain)

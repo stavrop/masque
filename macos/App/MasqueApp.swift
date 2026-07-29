@@ -1,7 +1,19 @@
 import SwiftUI
+import AppKit
+
+/// Shows the welcome window at launch (menu-bar agents have no window to attach a
+/// SwiftUI `.task` to before the popover opens, so this is driven from the delegate).
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        if WelcomeWindowController.showsAtStartup {
+            WelcomeWindowController.shared.show()
+        }
+    }
+}
 
 @main
 struct MasqueApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var state: AppState
 
     init() {
@@ -14,10 +26,14 @@ struct MasqueApp: App {
     }
 
     var body: some Scene {
-        MenuBarExtra("Masque", systemImage: "envelope.badge.shield.half.filled") {
+        MenuBarExtra {
             MenuRootView()
                 .environmentObject(state)
                 .task { await state.bootstrap() }
+        } label: {
+            // Custom label lets us size the glyph up a touch vs the default.
+            Image(systemName: "envelope.badge.shield.half.filled")
+                .font(.system(size: 16, weight: .regular))
         }
         .menuBarExtraStyle(.window)
     }

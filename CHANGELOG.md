@@ -6,6 +6,18 @@ MAJOR.MINOR (no patch) + a build number, matching the app's scheme.
 
 ## [Unreleased]
 
+## [0.2] — unreleased
+
+### Added
+- Welcome / About window shown at launch (with a "Show at startup" toggle) and
+  reopenable from the menu — app info, version, a GitHub-star nudge, and a
+  Buy Me a Coffee link.
+- Menu items: **About Masque**, **Star on GitHub**, **Buy Me a Coffee**; an
+  **About** link on the sign-in screen too.
+
+### Changed
+- Larger menu bar icon and a bigger app glyph in the welcome window.
+
 ## [0.1] — 2026-07-28
 
 First working version: a macOS menu bar app that creates, searches, and manages

@@ -144,6 +144,10 @@ struct AddressListView: View {
             }
             Spacer()
             Menu {
+                Button("About Masque") { WelcomeWindowController.shared.show() }
+                Button("Star on GitHub ★") { NSWorkspace.shared.open(Links.githubStar) }
+                Button("Buy Me a Coffee ☕") { NSWorkspace.shared.open(Links.buyMeACoffee) }
+                Divider()
                 Button("Sign Out") { Task { await state.signOut() } }
                 Button("Quit Masque") { NSApplication.shared.terminate(nil) }
             } label: { Image(systemName: "ellipsis.circle") }
