@@ -130,3 +130,10 @@ verified byte-for-byte against the reference Python `srp` library in the tests.
 - Custom email domains are not surfaced (only `@icloud.com` addresses).
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes.
+
+## Privacy & terms
+
+Masque has no servers and collects nothing — everything stays on your Mac and the
+only service it talks to is Apple's iCloud, with your own account. See
+[PRIVACY.md](PRIVACY.md) and [TERMS.md](TERMS.md). Source code is licensed under
+[Apache-2.0](LICENSE).
