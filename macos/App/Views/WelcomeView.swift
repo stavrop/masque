@@ -49,6 +49,13 @@ struct WelcomeView: View {
                 .foregroundStyle(.tertiary)
                 .fixedSize(horizontal: false, vertical: true)
 
+            HStack(spacing: 14) {
+                Button("Privacy Policy") { NSWorkspace.shared.open(Links.privacy) }
+                Button("Terms of Service") { NSWorkspace.shared.open(Links.terms) }
+            }
+            .buttonStyle(.link)
+            .font(.caption2)
+
             HStack {
                 Toggle("Show at startup", isOn: $showAtStartup)
                     .toggleStyle(.checkbox)

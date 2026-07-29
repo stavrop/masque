@@ -148,6 +148,9 @@ struct AddressListView: View {
                 Button("Star on GitHub ★") { NSWorkspace.shared.open(Links.githubStar) }
                 Button("Buy Me a Coffee ☕") { NSWorkspace.shared.open(Links.buyMeACoffee) }
                 Divider()
+                Button("Privacy Policy") { NSWorkspace.shared.open(Links.privacy) }
+                Button("Terms of Service") { NSWorkspace.shared.open(Links.terms) }
+                Divider()
                 Button("Sign Out") { Task { await state.signOut() } }
                 Button("Quit Masque") { NSApplication.shared.terminate(nil) }
             } label: { Image(systemName: "ellipsis.circle") }

@@ -4,8 +4,9 @@ import Foundation
 enum Links {
     static let github = URL(string: "https://github.com/stavrop/masque")!
     static let githubStar = URL(string: "https://github.com/stavrop/masque")!
-    // TODO: confirm the real Buy Me a Coffee handle.
     static let buyMeACoffee = URL(string: "https://www.buymeacoffee.com/stavrop")!
+    static let privacy = URL(string: "https://stavrop.github.io/masque/privacy.html")!
+    static let terms = URL(string: "https://stavrop.github.io/masque/terms.html")!
 }
 
 enum AppInfo {

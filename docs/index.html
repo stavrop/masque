@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Masque — Hide My Email, from your menu bar</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; color:#1c1c1e; background:#fff; }
+  @media (prefers-color-scheme: dark){ body{ color:#e7e7ea; background:#0b0b0d; } }
+  .wrap{ max-width:680px; margin:0 auto; padding:64px 24px 80px; text-align:center; }
+  a{ color:#0a66ff; } @media (prefers-color-scheme: dark){ a{ color:#6ea8fe; } }
+  .glyph{ width:84px; height:84px; border-radius:20px; background:linear-gradient(135deg,#0a84ff,#0a84ffaa); display:inline-flex; align-items:center; justify-content:center; font-size:42px; box-shadow:0 8px 24px rgba(10,132,255,.35); }
+  h1{ font-size:34px; margin:22px 0 6px; }
+  .tag{ color:#8a8a8e; font-size:18px; margin:0 0 28px; }
+  pre{ display:inline-block; text-align:left; background:rgba(127,127,127,.14); padding:14px 18px; border-radius:12px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:14px; overflow:auto; max-width:100%; }
+  .shot{ max-width:340px; width:100%; margin:34px auto 0; border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.25); display:block; }
+  .links{ margin-top:34px; font-size:15px; }
+  .links a{ margin:0 10px; }
+  .note{ color:#8a8a8e; font-size:13px; margin-top:30px; }
+  footer{ margin-top:44px; font-size:14px; color:#8a8a8e; }
+  footer a{ color:inherit; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="glyph">✉️</div>
+  <h1>Masque</h1>
+  <p class="tag">Create, search &amp; manage Apple <strong>Hide My Email</strong> addresses — from your Mac's menu bar.</p>
+
+  <pre>brew tap stavrop/tap
+brew install --cask masque</pre>
+
+  <img class="shot" src="screenshot.png" alt="Masque menu bar popover showing a list of Hide My Email addresses">
+
+  <div class="links">
+    <a href="https://github.com/stavrop/masque">GitHub</a> &middot;
+    <a href="https://github.com/stavrop/masque/releases/latest">Download</a> &middot;
+    <a href="privacy.html">Privacy</a> &middot;
+    <a href="terms.html">Terms</a>
+  </div>
+
+  <p class="note">Free &amp; open-source (Apache-2.0). Independent and unofficial —
+  not affiliated with Apple. Requires “Access iCloud Data on the Web” enabled on
+  your Apple ID.</p>
+
+  <footer>© 2026 Georgios Stavropoulos</footer>
+</div>
+</body>
+</html>
