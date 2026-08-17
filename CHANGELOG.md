@@ -6,6 +6,11 @@ MAJOR.MINOR (no patch) + a build number, matching the app's scheme.
 
 ## [Unreleased]
 
+### Added
+- App icon: a white masquerade mask on a violet squircle. The vector source
+  lives in `tools/icon.svg`; `tools/make_appicon.sh` rasterises it into the
+  asset catalog at every macOS size.
+
 ## [0.2] — 2026-07-29
 
 ### Added
