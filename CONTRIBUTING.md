@@ -44,6 +44,17 @@ Run in **mock mode** so you never touch real iCloud:
 - `MASQUE_MOCK_AUTHED=1` — start already signed-in (handy for UI work / screenshots).
 - `MASQUE_DEBUG=1` — log each auth/API step (status codes only, never secrets) to stderr.
 
+### App icon
+
+The icon is generated, not hand-drawn: `tools/icon.svg` is the source of truth.
+After editing it, regenerate the asset catalog (needs `brew install librsvg`):
+
+```sh
+./tools/make_appicon.sh     # rewrites macos/App/Assets.xcassets/AppIcon.appiconset
+```
+
+Commit both the SVG and the generated PNGs.
+
 ## Tests
 
 `macos/Tests/SRPClientTests.swift` pins the SRP handshake (public `A`, `M1`, `M2`)
