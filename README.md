@@ -18,10 +18,23 @@ brew install --cask masque
 Or grab the notarized `Masque.zip` from the
 [latest release](https://github.com/stavrop/masque/releases/latest).
 
+### If your Apple Account uses a hardware security key
+
+Apple turns off six-digit codes once security keys are registered, so signing in
+needs the key itself. Masque reads the assertion via [libfido2](https://developers.yubico.com/libfido2/):
+
+```sh
+brew install libfido2
+```
+
+Plug the key in and touch it when Masque asks. Without libfido2 installed, such
+an account cannot sign in — accounts that still use codes are unaffected.
+
 ## Features
 
 - 🔐 **Native iCloud sign-in** — Apple ID + password + two-factor, implemented
-  in Swift (SRP-6a). The password never leaves your Mac in the clear; only
+  in Swift (SRP-6a). Trusted-device codes, SMS, and **hardware security keys**
+  (WebAuthn/FIDO2) are all supported. The password never leaves your Mac in the clear; only
   Apple's trust token is stored (Keychain), so subsequent logins skip 2FA.
 - 💾 **Persistent session** — the authenticated session is saved to the Keychain
   and silently restored on the next launch (re-validated with a live call); no

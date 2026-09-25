@@ -32,6 +32,8 @@ struct MenuRootView: View {
             LoginView()
         case .twoFactor:
             TwoFactorView()
+        case .securityKey:
+            SecurityKeyView()
         case .addresses:
             AddressListView()
         }

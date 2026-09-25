@@ -2,9 +2,16 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- Sandboxed. Needs outgoing network to reach idmsa.apple.com / *.icloud.com. -->
-	<key>com.apple.security.app-sandbox</key>
-	<true/>
+	<!-- NOT sandboxed, deliberately.
+
+	     Apple Accounts with hardware security keys registered can only complete
+	     2FA with a WebAuthn assertion (see SecurityKeyAuthenticator.swift), and
+	     that needs the key's USB HID interface. The sandbox denies HID access
+	     and also denies spawning libfido2's fido2-assert from /opt/homebrew,
+	     so a sandboxed build simply cannot sign such an account in.
+
+	     Re-sandboxing means linking libfido2 into the app and adding
+	     com.apple.security.device.usb — worth doing; see CHANGELOG. -->
 	<key>com.apple.security.network.client</key>
 	<true/>
 </dict>

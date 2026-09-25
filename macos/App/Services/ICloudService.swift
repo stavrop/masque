@@ -8,6 +8,27 @@ enum SignInOutcome: Equatable {
     case needsTwoFactor
 }
 
+/// A trusted phone number Apple can text a code to.
+struct TwoFactorPhone: Identifiable, Equatable {
+    let id: Int
+    /// Masked by Apple, e.g. "+30 ••• ••• ••12".
+    let number: String
+}
+
+/// Which 2FA routes Apple says this account has, read from `GET /appleauth/auth`
+/// after the 409. Lets the UI offer SMS when no trusted device can show a code.
+struct TwoFactorOptions: Equatable {
+    var hasTrustedDevices: Bool
+    var phones: [TwoFactorPhone]
+    /// Present when the account uses hardware security keys. When it is set,
+    /// Apple will never send a code — this is the only way in.
+    var securityKey: SecurityKeyChallenge?
+
+    /// Assume devices exist until Apple tells us otherwise.
+    static let unknown = TwoFactorOptions(hasTrustedDevices: true, phones: [],
+                                          securityKey: nil)
+}
+
 /// Everything the UI needs from iCloud, behind one protocol so the SwiftUI layer
 /// is independent of the wire details. `MockICloudService` implements it with
 /// in-memory data for previews/UI work; `ICloudLiveService` talks to the real
@@ -20,8 +41,21 @@ protocol ICloudService: AnyObject {
     /// Begin sign-in with Apple ID + password (SRP). May require 2FA next.
     func signIn(appleID: String, password: String) async throws -> SignInOutcome
 
+    /// Which 2FA routes this account offers (trusted devices and/or SMS numbers).
+    func twoFactorOptions() async throws -> TwoFactorOptions
+
+    /// Ask Apple to push a fresh code to the trusted devices.
+    func resendDeviceCode() async throws
+
+    /// Ask Apple to text a code to one of the trusted phone numbers.
+    func sendPhoneCode(phoneID: Int) async throws
+
+    /// Complete 2FA with a hardware security key. Requires a physical touch.
+    func authenticateWithSecurityKey(_ challenge: SecurityKeyChallenge) async throws
+
     /// Submit the 6-digit 2FA code, completing login and trusting this device.
-    func submitSecurityCode(_ code: String) async throws
+    /// `phoneID` is nil for a trusted-device code, or the number the SMS went to.
+    func submitSecurityCode(_ code: String, phoneID: Int?) async throws
 
     /// Forget the stored session/trust token and sign out.
     func signOut() async throws

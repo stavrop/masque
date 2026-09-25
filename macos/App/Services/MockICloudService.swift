@@ -48,7 +48,20 @@ final class MockICloudService: ICloudService {
         return .authenticated
     }
 
-    func submitSecurityCode(_ code: String) async throws {
+    func twoFactorOptions() async throws -> TwoFactorOptions {
+        TwoFactorOptions(hasTrustedDevices: true,
+                         phones: [TwoFactorPhone(id: 1, number: "+30 ••• ••• ••12")])
+    }
+
+    func resendDeviceCode() async throws {}
+
+    func authenticateWithSecurityKey(_ challenge: SecurityKeyChallenge) async throws {
+        authenticated = true
+    }
+
+    func sendPhoneCode(phoneID: Int) async throws {}
+
+    func submitSecurityCode(_ code: String, phoneID: Int?) async throws {
         try await Task.sleep(nanoseconds: 400_000_000)
         guard code == "123456" else { throw ICloudError.invalidSecurityCode }
         pendingTwoFactor = false

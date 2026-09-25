@@ -35,9 +35,20 @@ actor ICloudLiveService: ICloudService {
 
     /// Verbose step logging to stderr when MASQUE_DEBUG=1. Never logs secrets
     /// (no password, code, tokens, or cookies) — only step names + HTTP status.
-    private let debug = ProcessInfo.processInfo.environment["MASQUE_DEBUG"] == "1"
+    private let debug = ["1", "2"].contains(
+        ProcessInfo.processInfo.environment["MASQUE_DEBUG"] ?? "")
     func dbg(_ s: String) {
         if debug { FileHandle.standardError.write(Data(("‹masque› " + s + "\n").utf8)) }
+    }
+
+    /// MASQUE_DEBUG=2 additionally dumps raw auth response bodies. These contain
+    /// device names and Apple-masked phone numbers — never codes or tokens — so
+    /// they stay off at the normal debug level.
+    private let verbose = ProcessInfo.processInfo.environment["MASQUE_DEBUG"] == "2"
+    func dbgBody(_ label: String, _ data: Data) {
+        guard verbose else { return }
+        let s = String(data: data, encoding: .utf8) ?? "<non-utf8 \(data.count) bytes>"
+        dbg("\(label) body: \(s.prefix(4000))")
     }
 
     init() {
@@ -147,19 +158,23 @@ actor ICloudLiveService: ICloudService {
         completeBody["trustTokens"] = trustToken.map { [$0] } ?? []
 
         dbg("signin/complete → POST (trustTokens=\(trustToken == nil ? 0 : 1))")
-        let (_, completeResp) = try await send(
+        let (completeData, completeResp) = try await send(
             "\(auth)/signin/complete?isRememberMeEnabled=true", method: "POST",
             json: completeBody, headers: authHeaders(originIsIDMSA: true))
         dbg("signin/complete ← \(completeResp.statusCode)")
+        dbgBody("signin/complete", completeData)
 
         switch completeResp.statusCode {
         case 200:
             try await bootstrapICloud()
             return .authenticated
         case 409:
-            // 2FA required — push a code to trusted devices.
-            dbg("2FA required; pushing security code")
-            try? await pushSecurityCode()
+            // 2FA required. Apple has ALREADY pushed a prompt to the trusted
+            // devices as part of this 409 — do NOT push again here. A second
+            // request supersedes the first, so the device ends up showing
+            // "a sign-in was requested" and then never displays a code sheet.
+            // Resending is an explicit user action instead; see resendDeviceCode().
+            dbg("2FA required (Apple pushed the prompt with the 409)")
             return .needsTwoFactor
         case 412:
             // Non-2FA "repair" precondition.
@@ -174,11 +189,22 @@ actor ICloudLiveService: ICloudService {
         }
     }
 
-    func submitSecurityCode(_ code: String) async throws {
-        let body: [String: Any] = ["securityCode": ["code": code]]
-        dbg("verify/securitycode → POST")
+    func submitSecurityCode(_ code: String, phoneID: Int?) async throws {
+        // An SMS code verifies against a different endpoint than a device code.
+        let path: String
+        let body: [String: Any]
+        if let phoneID {
+            path = "\(auth)/verify/phone/securitycode"
+            body = ["phoneNumber": ["id": phoneID],
+                    "securityCode": ["code": code],
+                    "mode": "sms"]
+        } else {
+            path = "\(auth)/verify/trusteddevice/securitycode"
+            body = ["securityCode": ["code": code]]
+        }
+        dbg("verify/securitycode → POST (\(phoneID == nil ? "device" : "sms"))")
         let (data, resp) = try await send(
-            "\(auth)/verify/trusteddevice/securitycode", method: "POST",
+            path, method: "POST",
             json: body, headers: authHeaders(originIsIDMSA: false))
         dbg("verify/securitycode ← \(resp.statusCode)")
         if resp.statusCode != 200 && resp.statusCode != 204 {
@@ -209,9 +235,117 @@ actor ICloudLiveService: ICloudService {
 
     // MARK: - Auth internals
 
-    private func pushSecurityCode() async throws {
-        _ = try await send("\(auth)/verify/trusteddevice/securitycode", method: "PUT",
-                           json: nil, headers: authHeaders(originIsIDMSA: false))
+    /// Read back the 2FA routes Apple offers for the pending sign-in.
+    func twoFactorOptions() async throws -> TwoFactorOptions {
+        dbg("authOptions → GET")
+        let (data, resp) = try await send(auth, method: "GET", json: nil,
+                                          headers: authHeaders(originIsIDMSA: false))
+        dbg("authOptions ← \(resp.statusCode)")
+        dbgBody("authOptions", data)
+        guard resp.statusCode == 200,
+              let j = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return .unknown }
+
+        let phones: [TwoFactorPhone] = (j["trustedPhoneNumbers"] as? [[String: Any]] ?? [])
+            .compactMap { p in
+                guard let id = p["id"] as? Int else { return nil }
+                let number = (p["numberWithDialCode"] as? String)
+                    ?? (p["obfuscatedNumber"] as? String)
+                    ?? "Trusted number"
+                return TwoFactorPhone(id: id, number: number)
+            }
+        // Apple sets `noTrustedDevices` when nothing can display a code.
+        let noDevices = (j["noTrustedDevices"] as? Bool) ?? false
+
+        // Accounts with security keys get an fsaChallenge and nothing else —
+        // no trusted-device code, no SMS.
+        var key: SecurityKeyChallenge?
+        if let fsa = j["fsaChallenge"] as? [String: Any],
+           let challenge = fsa["challenge"] as? String {
+            let handles = (fsa["keyHandles"] as? [String])
+                ?? (fsa["allowedCredentials"] as? String)?
+                    .split(separator: ",").map(String.init)
+                ?? []
+            key = SecurityKeyChallenge(
+                challenge: challenge,
+                keyHandles: handles,
+                rpId: (fsa["rpId"] as? String) ?? "apple.com",
+                keyNames: (j["keyNames"] as? [String]) ?? [])
+        }
+        dbg("authOptions: trustedDevices=\(!noDevices) phones=\(phones.count) "
+            + "securityKey=\(key != nil) handles=\(key?.keyHandles.count ?? 0)")
+        return TwoFactorOptions(hasTrustedDevices: !noDevices, phones: phones,
+                                securityKey: key)
+    }
+
+    /// Push a fresh code to the trusted devices. Failures surface, never swallowed.
+    func resendDeviceCode() async throws {
+        dbg("verify/trusteddevice (resend) → PUT")
+        let (_, resp) = try await send("\(auth)/verify/trusteddevice/securitycode",
+                                       method: "PUT", json: nil,
+                                       headers: authHeaders(originIsIDMSA: false))
+        dbg("verify/trusteddevice (resend) ← \(resp.statusCode)")
+        guard (200...299).contains(resp.statusCode) else {
+            if resp.statusCode == 403 || resp.statusCode == 412 {
+                throw ICloudError.server(
+                    "Apple wouldn’t send a code to a trusted device. Use a trusted "
+                    + "phone number below, or read a code off a device directly: "
+                    + "Settings › your name › Sign-In & Security › Get Verification Code.")
+            }
+            throw ICloudError.server("Couldn’t request a code (HTTP \(resp.statusCode)).")
+        }
+    }
+
+    /// Complete 2FA with a hardware security key: get a WebAuthn assertion from
+    /// the attached key, then post it to Apple. The key work happens off the
+    /// actor because it blocks waiting for the user's touch.
+    func authenticateWithSecurityKey(_ challenge: SecurityKeyChallenge) async throws {
+        dbg("security key: requesting assertion (touch required)")
+        let assertion = try await Task.detached(priority: .userInitiated) {
+            try SecurityKeyAuthenticator().assert(challenge)
+        }.value
+        dbg("security key: assertion obtained — \(assertion.diagnostics)")
+
+        // Apple wants the challenge echoed in the standard base64 alphabet,
+        // while clientDataJSON carries the base64url form.
+        let body: [String: Any] = [
+            "challenge": challenge.challenge
+                .replacingOccurrences(of: "-", with: "+")
+                .replacingOccurrences(of: "_", with: "/"),
+            "clientData": assertion.clientData,
+            "signatureData": assertion.signature,
+            "authenticatorData": assertion.authenticatorData,
+            "userHandle": assertion.userHandle,
+            "credentialID": assertion.credentialID,
+            "rpId": challenge.rpId,
+            "requestId": "",
+        ]
+        dbg("verify/security/key → POST")
+        let (data, resp) = try await send("\(auth)/verify/security/key", method: "POST",
+                                          json: body,
+                                          headers: authHeaders(originIsIDMSA: false))
+        dbg("verify/security/key ← \(resp.statusCode)")
+        dbgBody("verify/security/key", data)
+        // Apple acknowledges an accepted assertion with 409 as well as the
+        // ordinary success codes — 409 here does NOT mean "still needs 2FA".
+        guard [200, 204, 250, 409].contains(resp.statusCode) else {
+            throw ICloudError.server("Security key rejected (HTTP \(resp.statusCode)).")
+        }
+        try await trustSession()
+        try await bootstrapICloud()
+    }
+
+    /// Text a code to one of the account's trusted phone numbers.
+    func sendPhoneCode(phoneID: Int) async throws {
+        dbg("verify/phone → PUT")
+        let body: [String: Any] = ["phoneNumber": ["id": phoneID], "mode": "sms"]
+        let (_, resp) = try await send("\(auth)/verify/phone", method: "PUT",
+                                       json: body,
+                                       headers: authHeaders(originIsIDMSA: false))
+        dbg("verify/phone ← \(resp.statusCode)")
+        guard (200...299).contains(resp.statusCode) else {
+            throw ICloudError.server("Couldn’t text a code (HTTP \(resp.statusCode)).")
+        }
     }
 
     private func trustSession() async throws {

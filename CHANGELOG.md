@@ -6,6 +6,37 @@ MAJOR.MINOR (no patch) + a build number, matching the app's scheme.
 
 ## [Unreleased]
 
+## [0.4] — 2026-09-25
+
+### Added
+- **Sign in with a hardware security key.** Apple Accounts that have security
+  keys registered never receive a six-digit code — Apple disables trusted-device
+  and SMS verification entirely and instead returns a WebAuthn `fsaChallenge`.
+  Masque now detects that, shows a dedicated screen naming the registered keys,
+  and completes 2FA with an assertion from the attached key (a physical touch),
+  posted to `/appleauth/auth/verify/security/key`.
+- A **"Send a new one"** action and **per-number SMS** buttons on the 2FA screen,
+  for accounts that do use codes.
+
+### Fixed
+- **No code ever arrived on some accounts.** After Apple's `409`, Masque
+  immediately fired a second `PUT .../trusteddevice/securitycode`. Apple had
+  already pushed a prompt with the 409, and the duplicate superseded it — the
+  device showed "a sign-in was requested" and then no code sheet, forever.
+  The push is now an explicit user action only.
+- Failures of that push were swallowed by a `try?` and never surfaced, so the
+  UI sat on a code field with no indication anything had gone wrong.
+- An SMS code was verified against the trusted-device endpoint, which cannot
+  accept it; SMS codes now go to `/verify/phone/securitycode`.
+- `MASQUE_DEBUG=2` (raw auth bodies) silently disabled all logging, because the
+  flag was compared against `"1"` exactly.
+
+### Changed
+- **The app is no longer sandboxed.** Reading an assertion off a security key
+  needs the USB HID interface, which the sandbox denies. Re-sandboxing requires
+  linking libfido2 in-process plus `com.apple.security.device.usb`.
+- Security-key login requires **libfido2** (`brew install libfido2`).
+
 ## [0.3] — 2026-08-17
 
 ### Added

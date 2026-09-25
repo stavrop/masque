@@ -11,6 +11,7 @@ final class AppState: ObservableObject {
         case restoring          // checking Keychain for a trusted session
         case login              // Apple ID + password form
         case twoFactor          // 6-digit code entry
+        case securityKey        // hardware key touch (no code exists)
         case addresses          // signed in: list + create + manage
     }
 
@@ -22,6 +23,11 @@ final class AppState: ObservableObject {
     @Published var errorMessage: String?
     /// Transient confirmation, e.g. "Copied ✓".
     @Published var toast: String?
+
+    /// 2FA routes Apple offers for the pending sign-in (devices and/or SMS).
+    @Published var twoFactorOptions: TwoFactorOptions = .unknown
+    /// Set once a code has been texted, so it verifies against the SMS endpoint.
+    @Published var pendingPhoneID: Int?
 
     private let service: ICloudService
     private var didBootstrap = false
@@ -61,7 +67,13 @@ final class AppState: ObservableObject {
         await run {
             switch try await self.service.signIn(appleID: appleID, password: password) {
             case .needsTwoFactor:
-                self.screen = .twoFactor
+                self.pendingPhoneID = nil
+                // Tells us whether this is a code flow at all: accounts with
+                // security keys never get a code, so route them elsewhere.
+                self.twoFactorOptions =
+                    (try? await self.service.twoFactorOptions()) ?? .unknown
+                self.screen = self.twoFactorOptions.securityKey == nil
+                    ? .twoFactor : .securityKey
             case .authenticated:
                 try await self.loadAddresses()
                 self.screen = .addresses
@@ -71,9 +83,38 @@ final class AppState: ObservableObject {
 
     func submitCode(_ code: String) async {
         await run {
-            try await self.service.submitSecurityCode(code)
+            try await self.service.submitSecurityCode(code, phoneID: self.pendingPhoneID)
+            try await self.loadAddresses()
+            self.pendingPhoneID = nil
+            self.screen = .addresses
+        }
+    }
+
+    /// Complete sign-in with the hardware security key. Blocks on a physical touch.
+    func authenticateWithSecurityKey() async {
+        guard let challenge = twoFactorOptions.securityKey else { return }
+        await run {
+            try await self.service.authenticateWithSecurityKey(challenge)
             try await self.loadAddresses()
             self.screen = .addresses
+        }
+    }
+
+    /// Explicitly ask Apple to push a new code to the trusted devices.
+    func resendDeviceCode() async {
+        await run {
+            try await self.service.resendDeviceCode()
+            self.pendingPhoneID = nil
+            self.toast = "Code sent to your devices"
+        }
+    }
+
+    /// Ask Apple to text a code to `phone`.
+    func sendPhoneCode(_ phone: TwoFactorPhone) async {
+        await run {
+            try await self.service.sendPhoneCode(phoneID: phone.id)
+            self.pendingPhoneID = phone.id
+            self.toast = "Code texted to \(phone.number)"
         }
     }
 
@@ -82,6 +123,8 @@ final class AppState: ObservableObject {
             try await self.service.signOut()
             self.addresses = []
             self.searchText = ""
+            self.pendingPhoneID = nil
+            self.twoFactorOptions = .unknown
             self.screen = .login
         }
     }

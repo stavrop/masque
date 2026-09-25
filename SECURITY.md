@@ -38,3 +38,14 @@ hobby project, not a commercial product).
   session in your Keychain, only run builds you trust. Releases are Developer
   ID-signed and **notarized**, and building from source (the documented path)
   lets you audit exactly what runs.
+
+## App Sandbox
+
+As of 0.4 Masque is **not** sandboxed. Completing Apple's security-key 2FA
+requires a WebAuthn assertion from the key over USB HID, which the App Sandbox
+denies. The app still runs under the hardened runtime, is Developer ID-signed
+and notarized, and requests no entitlement beyond outgoing network access.
+
+Restoring the sandbox means linking libfido2 into the app and adding
+`com.apple.security.device.usb`, rather than invoking the `fido2-assert`
+binary — a known follow-up, not a permanent design.
