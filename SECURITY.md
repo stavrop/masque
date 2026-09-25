@@ -41,11 +41,15 @@ hobby project, not a commercial product).
 
 ## App Sandbox
 
-As of 0.4 Masque is **not** sandboxed. Completing Apple's security-key 2FA
-requires a WebAuthn assertion from the key over USB HID, which the App Sandbox
-denies. The app still runs under the hardened runtime, is Developer ID-signed
-and notarized, and requests no entitlement beyond outgoing network access.
+Masque runs in the App Sandbox under the hardened runtime, Developer ID-signed
+and notarized. It holds two entitlements:
 
-Restoring the sandbox means linking libfido2 into the app and adding
-`com.apple.security.device.usb`, rather than invoking the `fido2-assert`
-binary — a known follow-up, not a permanent design.
+- `com.apple.security.network.client` — reaching idmsa.apple.com and iCloud.
+- `com.apple.security.device.usb` — talking CTAP2 to a hardware security key,
+  for Apple Accounts that use one as their second factor.
+
+0.4 briefly shipped unsandboxed, because it obtained the assertion by running
+libfido2's `fido2-assert`, and the sandbox denies both USB HID access and
+spawning that binary. 0.5 speaks CTAP2 in-process instead, which the sandbox
+permits with the USB entitlement, so the confinement is back and no third-party
+library is involved.

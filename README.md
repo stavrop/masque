@@ -21,14 +21,8 @@ Or grab the notarized `Masque.zip` from the
 ### If your Apple Account uses a hardware security key
 
 Apple turns off six-digit codes once security keys are registered, so signing in
-needs the key itself. Masque reads the assertion via [libfido2](https://developers.yubico.com/libfido2/):
-
-```sh
-brew install libfido2
-```
-
-Plug the key in and touch it when Masque asks. Without libfido2 installed, such
-an account cannot sign in — accounts that still use codes are unaffected.
+needs the key itself. Plug it in and touch it once when Masque asks — there is
+nothing to install, and accounts that still use codes are unaffected.
 
 ## Features
 

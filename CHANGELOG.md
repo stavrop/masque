@@ -6,6 +6,31 @@ MAJOR.MINOR (no patch) + a build number, matching the app's scheme.
 
 ## [Unreleased]
 
+## [0.5] — 2026-09-25
+
+### Changed
+- **The sandbox is back, and the libfido2 dependency is gone.** 0.4 reached the
+  security key by shelling out to `fido2-assert`, which meant giving up the App
+  Sandbox (it denies both USB HID access and spawning that binary) and asking
+  users to `brew install libfido2`. Masque now speaks CTAP2 to the key itself,
+  in-process, over IOKit HID — so it runs sandboxed again with one added
+  entitlement, `com.apple.security.device.usb`, and installs with no
+  dependencies. The app also stays universal (Intel + Apple Silicon), which
+  linking Homebrew's arm64-only libfido2 would have prevented.
+- **One touch instead of two.** Every registered credential is sent in a single
+  CTAP2 `allowList`, so the key selects the one it holds rather than Masque
+  trying each in turn.
+
+### Added
+- `CTAPHIDDevice` — CTAPHID transport (channel allocation, packet framing,
+  keepalive handling) over IOKit HID.
+- `CBOR` — the subset of RFC 8949 that CTAP2 needs, encode and decode.
+
+### Fixed
+- The authenticator data no longer needs unwrapping: reading the CTAP2 response
+  directly yields the raw bytes WebAuthn signs. The CBOR byte-string header that
+  0.4 had to strip was an artifact of the `fido2-assert` CLI's output format.
+
 ## [0.4] — 2026-09-25
 
 ### Added
