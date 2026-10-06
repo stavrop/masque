@@ -1,3 +1,5 @@
+> The current terms is at https://www.georgiosstavropoulos.com/terms#masque
+
 # Terms of Service
 
 **Masque** — last updated 2026-07-29

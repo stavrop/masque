@@ -1,104 +1,28 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-GB">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Masque — Privacy Policy</title>
+<title>This page has moved</title>
+<meta name="robots" content="noindex">
+<meta http-equiv="refresh" content="0; url=https://www.georgiosstavropoulos.com/privacy#masque">
+<link rel="canonical" href="https://www.georgiosstavropoulos.com/privacy#masque">
 <style>
-  :root { color-scheme: light dark; }
-  * { box-sizing: border-box; }
-  body { margin:0; font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; color:#1c1c1e; background:#fff; }
-  @media (prefers-color-scheme: dark){ body{ color:#e7e7ea; background:#0b0b0d; } }
-  .wrap{ max-width:720px; margin:0 auto; padding:44px 24px 80px; }
-  a{ color:#0a66ff; } @media (prefers-color-scheme: dark){ a{ color:#6ea8fe; } }
-  .brand{ display:inline-flex; align-items:center; gap:9px; font-weight:700; font-size:17px; color:inherit; text-decoration:none; }
-  .glyph{ width:26px; height:26px; border-radius:7px; background:linear-gradient(135deg,#0a84ff,#0a84ffaa); display:inline-flex; align-items:center; justify-content:center; font-size:15px; }
-  h1{ font-size:28px; margin:30px 0 2px; }
-  .updated{ color:#8a8a8e; font-size:14px; margin:0 0 26px; }
-  h2{ font-size:18px; margin:30px 0 8px; }
-  .lead{ font-size:17px; }
-  code{ font-family:ui-monospace,SFMono-Regular,Menlo,monospace; background:rgba(127,127,127,.16); padding:2px 6px; border-radius:5px; font-size:.9em; }
-  footer{ margin-top:52px; padding-top:18px; border-top:1px solid rgba(127,127,127,.25); font-size:14px; color:#8a8a8e; }
-  footer a{ color:inherit; }
+  :root { color-scheme: dark; }
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: #0e0f12; color: #e6e7ea; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; padding: 24px; box-sizing: border-box; }
+  main { max-width: 480px; }
+  h1 { font-size: 1.5rem; margin: 0 0 12px; }
+  a { color: #7db4ff; word-break: break-all; }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <a class="brand" href="./"><span class="glyph">✉️</span> Masque</a>
-
-  <h1>Privacy Policy</h1>
-  <p class="updated">Last updated 29 July 2026</p>
-
-  <p class="lead"><strong>Masque has no servers and collects nothing.</strong>
-  Everything happens on your Mac, and the only service the app talks to is
-  Apple's iCloud, using your own account.</p>
-
-  <h2>Scope</h2>
-  <p>This policy covers the Masque macOS app (“the app”), distributed at
-  <a href="https://github.com/stavrop/masque">github.com/stavrop/masque</a> and
-  via the <code>stavrop/tap</code> Homebrew tap.</p>
-
-  <h2>What Masque collects</h2>
-  <p><strong>Nothing — for the developer.</strong> There is no Masque server, no
-  analytics, no telemetry, no crash reporting, no tracking, and no account with
-  the developer. The developer never receives your Apple ID, your password, your
-  addresses, or any usage data. Masque runs entirely on your Mac and communicates
-  <strong>only with Apple's servers</strong> (<code>idmsa.apple.com</code> and
-  <code>*.icloud.com</code>) — the same ones the icloud.com website uses — to sign
-  in and manage your Hide My Email addresses.</p>
-
-  <h2>Your Apple ID credentials</h2>
-  <ul>
-    <li>When you sign in, your Apple ID password is used in Apple's <strong>SRP</strong>
-    login handshake. It is sent <strong>only to Apple</strong>, never travels in
-    plain text, and is <strong>never stored</strong> by Masque nor transmitted to
-    the developer.</li>
-    <li>After a successful sign-in (including two-factor), Masque stores
-    <strong>only</strong> Apple's session cookies and trust token in your Mac's
-    <strong>Keychain</strong>, so you don't have to sign in on every launch. These
-    never leave your Mac except when the app uses them to talk to Apple.</li>
-  </ul>
-
-  <h2>Data stored locally on your Mac</h2>
-  <ul>
-    <li><strong>Keychain:</strong> Apple session cookies + trust token (above).</li>
-    <li><strong>App preferences</strong> (macOS user defaults): non-personal UI
-    settings only, such as the address-list height and whether to show the welcome
-    window.</li>
-    <li>Your Hide My Email addresses live in <strong>your iCloud account</strong> —
-    Masque displays them but keeps no separate copy or database.</li>
-  </ul>
-  <p>Uninstalling (<code>brew uninstall --cask masque</code> runs the cask's
-  <code>zap</code>, or drag the app to the Trash and remove its container) clears
-  these local items.</p>
-
-  <h2>Third parties</h2>
-  <ul>
-    <li><strong>Apple.</strong> All account and Hide My Email data is processed by
-    Apple under <a href="https://www.apple.com/legal/privacy/">Apple's Privacy
-    Policy</a>. Masque is not affiliated with Apple.</li>
-    <li><strong>Optional links.</strong> If you click “Star on GitHub” or “Buy me a
-    coffee,” your browser opens GitHub or Buy Me a Coffee, each with their own
-    privacy policy. Masque shares no data with them.</li>
-  </ul>
-
-  <h2>Children</h2>
-  <p>Masque is not directed at children and collects no personal information from
-  anyone.</p>
-
-  <h2>Changes</h2>
-  <p>This policy may change; updates are published here with a new “last updated”
-  date.</p>
-
-  <h2>Contact</h2>
-  <p>Questions or concerns: open an issue at
-  <a href="https://github.com/stavrop/masque/issues">github.com/stavrop/masque/issues</a>.</p>
-
-  <footer>
-    <a href="./">Masque</a> &middot;
-    <a href="terms.html">Terms of Service</a> &middot;
-    <a href="https://github.com/stavrop/masque">GitHub</a>
-  </footer>
-</div>
+<main>
+  <h1>This page has moved</h1>
+  <p>The privacy policy for this app now lives on georgiosstavropoulos.com. If you are not redirected automatically, please follow this link:</p>
+  <p><a href="https://www.georgiosstavropoulos.com/privacy#masque">https://www.georgiosstavropoulos.com/privacy#masque</a></p>
+</main>
+<script>location.replace("https://www.georgiosstavropoulos.com/privacy#masque");</script>
 </body>
 </html>

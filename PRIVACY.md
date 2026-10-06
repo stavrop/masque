@@ -1,3 +1,5 @@
+> The current privacy policy is at https://www.georgiosstavropoulos.com/privacy#masque
+
 # Privacy Policy
 
 **Masque** — last updated 2026-07-29
