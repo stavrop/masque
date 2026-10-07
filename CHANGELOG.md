@@ -6,6 +6,9 @@ MAJOR.MINOR (no patch) + a build number, matching the app's scheme.
 
 ## [Unreleased]
 
+### Changed
+- The privacy policy and terms now live on https://www.georgiosstavropoulos.com (`/privacy#masque`, `/terms#masque`); the old `docs/privacy.html` and `docs/terms.html` redirect there, and `PRIVACY.md` and `TERMS.md` point to the new pages.
+
 ## [0.5] — 2026-09-25
 
 ### Changed
